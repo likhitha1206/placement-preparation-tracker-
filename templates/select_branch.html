@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Select Branch</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<div class="card">
+    <h2>Select Your Branch</h2>
+
+    <form method="post">
+        <select name="branch" required>
+            <option value="">Select Branch</option>
+            <option value="cse">CSE</option>
+            <option value="ece">ECE</option>
+            <option value="mech">MECH</option>
+            <option value="EEE">EEE</option>
+            <option value="CIVIL">CIVIL</option>
+        </select>
+
+        <button type="submit">Continue</button>
+    </form>
+</div>
+
+</body>
+</html>

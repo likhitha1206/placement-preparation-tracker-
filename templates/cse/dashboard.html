@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>CSE Placement Tracker</title>
+<style>
+
+
+body{font-family:Arial;background:#f0f4f8;margin:0;padding:20px;}
+.container{max-width:1000px;margin:auto;background:white;padding:30px;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,0.1);}
+
+h2{text-align:center;color:#1e3a8a;}
+.stats{display:flex;justify-content:space-between;margin:20px 0;}
+.card{background:#e0f2fe;padding:15px;border-radius:8px;width:30%;text-align:center;}
+ul{list-style:none;padding:0;}
+li{display:flex;justify-content:space-between;align-items:center;margin:8px 0;padding:6px;border-radius:6px;}
+.completed{background:#d1fae5;color:#065f46;font-weight:bold;}
+select{padding:5px;}
+button{margin-left:8px;padding:4px 8px;cursor:pointer;}
+.progress-box{background:#e0f2fe;padding:10px;border-radius:6px;margin-top:10px;}
+.resource-popup{
+position:fixed;
+top:30%;
+left:50%;
+transform:translate(-50%,-50%);
+background:white;
+padding:20px;
+border-radius:10px;
+box-shadow:0 4px 15px rgba(0,0,0,0.2);
+display:none;
+z-index:1000;
+}
+.resource-popup button{
+display:block;
+margin:8px 0;
+width:100%;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>CSE Placement Dashboard</h2>
+
+<div style="text-align:right; margin-bottom:15px;">
+    <a href="/goals">
+        <button style="background:#f59e0b;color:white;padding:8px 14px;border:none;border-radius:6px;cursor:pointer;">
+            🎯 Goal Tracker
+        </button>
+    </a>
+</div>
+
+<div style="text-align:left; margin-bottom:15px;">
+    <a href="/studyplan">
+        <button style="background:#f59e0b;color:white;padding:8px 14px;border:none;border-radius:6px;cursor:pointer;">
+            🎯 Study Plan
+        </button>
+    </a>
+</div>
+
+<a href="/ai">
+    <button>🤖 AI </button>
+</a>
+
+<div class="stats">
+<div class="card"><h3>Subjects</h3><p id="subjectCount">0</p></div>
+<div class="card"><h3>Companies</h3><p id="companyCount">0</p></div>
+<div class="card"><h3>Overall Progress</h3><p id="overallProgress">0%</p></div>
+</div>
+
+<hr>
+
+<h3>Subject Preparation</h3>
+<select id="subjectSelect" onchange="loadTopics()">
+<option value="">-- Select Subject --</option>
+</select>
+<ul id="topicList"></ul>
+<div class="progress-box">
+Subject Progress: <span id="subjectProgress">0%</span>
+</div>
+
+<hr>
+
+<h3>Common Placement Skills</h3>
+<select id="commonSelect" onchange="loadCommonTopics()">
+<option value="">-- Select Skill Area --</option>
+</select>
+<ul id="commonTopicList"></ul>
+<div class="progress-box">
+Common Skills Progress: <span id="commonProgress">0%</span>
+</div>
+
+<hr>
+
+<h3>Company Wise Preparation</h3>
+<select id="companySelect" onchange="loadCompanyTopics()">
+<option value="">-- Select Company --</option>
+</select>
+<ul id="companyTopicList"></ul>
+<div class="progress-box">
+Company Progress: <span id="companyProgress">0%</span>
+</div>
+
+</div>
+
+<!-- RESOURCE POPUP -->
+<div class="resource-popup" id="resourcePopup">
+<h3 id="resourceTitle"></h3>
+<button onclick="openResource('youtube')">YouTube</button>
+<button onclick="openResource('practice')">Practice</button>
+<button onclick="openResource('notes')">Notes</button>
+<button onclick="closePopup()">Close</button>
+</div>
+
+<script>
+
+// ===== SUBJECTS =====
+const subjectTopics={
+DSA:["Arrays","Strings","Linked List","Stack","Queue","Trees","Graphs","DP"],
+OOPS:["Class","Object","Inheritance","Polymorphism","Encapsulation"],
+DBMS:["ER Model","Normalization","SQL","Joins","Transactions"],
+OS:["Processes","Threads","Deadlocks","Memory Management"],
+CN:["OSI","TCP/IP","HTTP","DNS"],
+Web:["HTML","CSS","JavaScript","APIs"]
+};
+
+// ===== COMMON =====
+const commonTopics={
+Aptitude:["Percentage","Profit & Loss","Time & Work","Time & Distance","Ratio & Proportion","Probability","Permutations & Combinations","Number System"],
+Reasoning:["Blood Relations","Coding Decoding","Puzzles","Syllogism","Direction Sense","Seating Arrangement"],
+English:["Grammar","Tenses","Active & Passive Voice","Synonyms & Antonyms","Reading Comprehension","Error Detection"]
+};
+
+// ===== CSE COMPANIES =====
+const companyRequirements={
+TCS:["DSA","OOPS","DBMS","Aptitude"],
+Infosys:["DSA","OOPS","OS","Aptitude","Reasoning"],
+Wipro:["DSA","DBMS","CN","Aptitude"],
+Accenture:["DSA","OOPS","Web","Aptitude","English"],
+Google:["DSA","OOPS","OS","DBMS","CN"],
+Amazon:["DSA","OOPS","OS","DBMS"],
+Microsoft:["DSA","OOPS","OS","DBMS"]
+};
+
+// ===== RESOURCE GENERATOR =====
+function generateResource(topic){
+const encoded=encodeURIComponent(topic);
+return{
+youtube:`https://www.youtube.com/results?search_query=${encoded}+placement+preparation`,
+practice:`https://www.google.com/search?q=${encoded}+practice+questions`,
+notes:`https://www.geeksforgeeks.org/search/?q=${encoded}`
+};
+}
+
+let currentResource=null;
+
+// ELEMENTS
+const subjectSelect=document.getElementById("subjectSelect");
+const commonSelect=document.getElementById("commonSelect");
+const companySelect=document.getElementById("companySelect");
+const topicList=document.getElementById("topicList");
+const commonTopicList=document.getElementById("commonTopicList");
+const companyTopicList=document.getElementById("companyTopicList");
+const subjectCount=document.getElementById("subjectCount");
+const companyCount=document.getElementById("companyCount");
+const overallProgress=document.getElementById("overallProgress");
+const subjectProgress=document.getElementById("subjectProgress");
+const commonProgress=document.getElementById("commonProgress");
+const companyProgress=document.getElementById("companyProgress");
+
+// INIT
+function init(){
+Object.keys(subjectTopics).forEach(sub=>{
+subjectSelect.innerHTML+=`<option value="${sub}">${sub}</option>`;
+});
+Object.keys(commonTopics).forEach(skill=>{
+commonSelect.innerHTML+=`<option value="${skill}">${skill}</option>`;
+});
+Object.keys(companyRequirements).forEach(c=>{
+companySelect.innerHTML+=`<option value="${c}">${c}</option>`;
+});
+subjectCount.innerText=Object.keys(subjectTopics).length + Object.keys(commonTopics).length;
+companyCount.innerText=Object.keys(companyRequirements).length;
+updateOverall();
+}
+init();
+
+// LOAD SUBJECT
+function loadTopics(){
+const subject=subjectSelect.value;
+topicList.innerHTML="";
+if(!subject) return;
+const saved=JSON.parse(localStorage.getItem(subject))||{};
+subjectTopics[subject].forEach(topic=>{
+const status=saved[topic]||"not";
+const className=status==="done"?"completed":"";
+topicList.innerHTML+=`
+<li class="${className}">
+${topic}
+<div>
+<select onchange="saveStatus('${subject}','${topic}',this.value)">
+<option value="not" ${status==="not"?"selected":""}>Not Started</option>
+<option value="done" ${status==="done"?"selected":""}>Completed</option>
+</select>
+<button onclick="showResources('${topic}')">Resources</button>
+</div>
+</li>`;
+});
+updateSubjectProgress(subject);
+updateOverall();
+}
+
+// LOAD COMMON
+function loadCommonTopics(){
+const skill=commonSelect.value;
+commonTopicList.innerHTML="";
+if(!skill) return;
+const saved=JSON.parse(localStorage.getItem("COMMON_"+skill))||{};
+commonTopics[skill].forEach(topic=>{
+const status=saved[topic]||"not";
+const className=status==="done"?"completed":"";
+commonTopicList.innerHTML+=`
+<li class="${className}">
+${topic}
+<div>
+<select onchange="saveCommonStatus('${skill}','${topic}',this.value)">
+<option value="not" ${status==="not"?"selected":""}>Not Started</option>
+<option value="done" ${status==="done"?"selected":""}>Completed</option>
+</select>
+<button onclick="showResources('${topic}')">Resources</button>
+</div>
+</li>`;
+});
+updateCommonProgress(skill);
+updateOverall();
+}
+
+// LOAD COMPANY
+function loadCompanyTopics(){
+const company=companySelect.value;
+companyTopicList.innerHTML="";
+if(!company) return;
+
+companyRequirements[company].forEach(area=>{
+if(subjectTopics[area]){
+subjectTopics[area].forEach(topic=>{
+addCompanyTopic(area,topic);
+});
+}
+if(commonTopics[area]){
+commonTopics[area].forEach(topic=>{
+addCompanyTopic(area,topic);
+});
+}
+});
+updateCompanyProgress(company);
+updateOverall();
+}
+
+function addCompanyTopic(area,topic){
+const key = subjectTopics[area] ? area : "COMMON_"+area;
+const saved=JSON.parse(localStorage.getItem(key))||{};
+const status=saved[topic]||"not";
+const className=status==="done"?"completed":"";
+
+companyTopicList.innerHTML+=`
+<li class="${className}">
+${area} - ${topic}
+<div>
+<select onchange="saveCompanyStatus('${area}','${topic}',this.value)">
+<option value="not" ${status==="not"?"selected":""}>Not Started</option>
+<option value="done" ${status==="done"?"selected":""}>Completed</option>
+</select>
+<button onclick="showResources('${topic}')">Resources</button>
+</div>
+</li>`;
+}
+
+function saveCompanyStatus(area,topic,status){
+if(subjectTopics[area]){
+saveStatus(area,topic,status);
+}else{
+saveCommonStatus(area,topic,status);
+}
+}
+
+// SAVE
+function saveStatus(subject,topic,status){
+let data=JSON.parse(localStorage.getItem(subject))||{};
+data[topic]=status;
+localStorage.setItem(subject,JSON.stringify(data));
+loadTopics();
+}
+function saveCommonStatus(skill,topic,status){
+let data=JSON.parse(localStorage.getItem("COMMON_"+skill))||{};
+data[topic]=status;
+localStorage.setItem("COMMON_"+skill,JSON.stringify(data));
+loadCommonTopics();
+}
+
+// PROGRESS
+function updateSubjectProgress(subject){
+const data=JSON.parse(localStorage.getItem(subject))||{};
+const total=subjectTopics[subject].length;
+const done=Object.values(data).filter(v=>v==="done").length;
+subjectProgress.innerText=Math.round((done/total)*100)+"%";
+}
+function updateCommonProgress(skill){
+const data=JSON.parse(localStorage.getItem("COMMON_"+skill))||{};
+const total=commonTopics[skill].length;
+const done=Object.values(data).filter(v=>v==="done").length;
+commonProgress.innerText=Math.round((done/total)*100)+"%";
+}
+function updateCompanyProgress(company){
+let total=0,done=0;
+companyRequirements[company].forEach(area=>{
+if(subjectTopics[area]){
+const data=JSON.parse(localStorage.getItem(area))||{};
+total+=subjectTopics[area].length;
+done+=Object.values(data).filter(v=>v==="done").length;
+}
+if(commonTopics[area]){
+const data=JSON.parse(localStorage.getItem("COMMON_"+area))||{};
+total+=commonTopics[area].length;
+done+=Object.values(data).filter(v=>v==="done").length;
+}
+});
+companyProgress.innerText=Math.round((done/total)*100)+"%";
+}
+function updateOverall(){
+let total=0,done=0;
+Object.keys(subjectTopics).forEach(sub=>{
+const data=JSON.parse(localStorage.getItem(sub))||{};
+total+=subjectTopics[sub].length;
+done+=Object.values(data).filter(v=>v==="done").length;
+});
+Object.keys(commonTopics).forEach(skill=>{
+const data=JSON.parse(localStorage.getItem("COMMON_"+skill))||{};
+total+=commonTopics[skill].length;
+done+=Object.values(data).filter(v=>v==="done").length;
+});
+overallProgress.innerText=Math.round((done/total)*100)+"%";
+}
+
+// RESOURCE POPUP
+function showResources(topic){
+currentResource=generateResource(topic);
+document.getElementById("resourceTitle").innerText=topic+" Resources";
+document.getElementById("resourcePopup").style.display="block";
+}
+function openResource(type){
+window.open(currentResource[type],"_blank");
+}
+function closePopup(){
+document.getElementById("resourcePopup").style.display="none";
+}
+
+</script>
+</body>
+</html>

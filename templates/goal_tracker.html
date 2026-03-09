@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="UTF-8">
+<title>Goal Tracker</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+
+/* BACKGROUND IMAGE */
+
+body{
+margin:0;
+padding:0;
+
+font-family:Arial;
+
+background-image:url("{{ url_for('static', filename='images/bg.jpg') }}");
+background-size:cover;
+background-position:center;
+background-repeat:no-repeat;
+
+display:flex;
+justify-content:center;
+align-items:center;
+
+height:100vh;
+}
+/* BLUR OVERLAY */
+
+body::before {
+
+content:"";
+
+position:fixed;
+
+top:0;
+left:0;
+
+width:100%;
+height:100%;
+
+background:rgba(0,0,0,0.4);
+
+backdrop-filter: blur(6px);
+
+z-index:-1;
+
+}
+
+/* CONTAINER CENTER */
+
+.container{
+
+
+max-width:600px;
+
+background:rgba(255,255,255,0.9);
+
+padding:25px;
+
+border-radius:10px;
+
+box-shadow:0 5px 20px rgba(0,0,0,0.3);
+
+
+}
+
+/* PROGRESS BAR */
+
+.progress-bar{
+background:#ddd;
+height:20px;
+border-radius:10px;
+margin-top:10px;
+}
+
+.progress-bar div{
+height:100%;
+width:0%;
+background:green;
+border-radius:10px;
+}
+
+/* GOAL BOX */
+
+.goal-box{
+
+background:#e0f2fe;
+
+padding:15px;
+
+border-radius:8px;
+
+margin-top:15px;
+
+}
+
+/* DELETE BUTTON */
+
+.delete-btn{
+
+background:red;
+
+color:white;
+
+border:none;
+
+padding:6px 10px;
+
+border-radius:5px;
+
+cursor:pointer;
+
+margin-top:10px;
+
+}
+
+/* INPUTS */
+
+input,textarea{
+
+width:100%;
+padding:10px;
+margin-top:5px;
+
+border-radius:5px;
+border:1px solid #ccc;
+
+}
+
+button{
+
+padding:8px 12px;
+margin-top:10px;
+
+border:none;
+background:#2563eb;
+
+color:white;
+
+border-radius:5px;
+
+cursor:pointer;
+
+}
+
+button:hover{
+
+background:#1e40af;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Goal Tracker 🎯</h2>
+<canvas id="progressChart"></canvas>
+<input type="text" id="goalName" placeholder="Enter Goal Name">
+<label>Select Company Goal</label>
+<select id="companyGoal">
+<option value="">Select Company Goal</option>
+<option value="TCS">TCS</option>
+<option value="Infosys">Infosys</option>
+<option value="Amazon">Amazon</option>
+<option value="Google">Google</option>
+</select>
+
+<br><br>
+<label>Deadline:</label>
+<input type="date" id="deadline">
+
+<br><br>
+
+<textarea id="requirements" placeholder="Enter requirements separated by comma
+
+Example:
+DSA, OS, DBMS, Aptitude"></textarea>
+
+<br><br>
+
+<button onclick="addGoal()">Add Goal</button>
+
+<div id="goalList"></div>
+
+</div>
+
+<script>
+
+let goals = JSON.parse(localStorage.getItem("goals")) || [];
+
+function saveToStorage(){
+localStorage.setItem("goals",JSON.stringify(goals));
+}
+
+function renderGoals(){
+
+document.getElementById("goalList").innerHTML="";
+
+goals.forEach((goal,goalIndex)=>{
+
+let goalDiv=document.createElement("div");
+goalDiv.className="goal-box";
+
+let checkboxesHTML="";
+
+goal.requirements.forEach((req,reqIndex)=>{
+
+checkboxesHTML+=`
+<label>
+<input type="checkbox"
+${req.completed ? "checked":""}
+onchange="toggleRequirement(${goalIndex},${reqIndex})">
+${req.name}
+</label><br>
+`;
+
+});
+
+let percent=calculateProgress(goal);
+
+goalDiv.innerHTML=`
+
+<h3>${goal.name}</h3>
+<p>Company: ${goal.company}</p>
+<p>Deadline: ${goal.deadline}</p>
+
+${checkboxesHTML}
+
+<div class="progress-bar">
+<div style="width:${percent}%"></div>
+</div>
+
+<p>Progress: ${percent}%</p>
+
+<button class="delete-btn" onclick="deleteGoal(${goalIndex})">
+Delete Goal
+</button>
+
+`;
+
+document.getElementById("goalList").appendChild(goalDiv);
+
+});
+
+}
+
+function calculateProgress(goal){
+
+let total=goal.requirements.length;
+let done=goal.requirements.filter(r=>r.completed).length;
+
+return Math.round((done/total)*100);
+
+}
+if(percent===100){
+alert("🎉 Goal Completed Successfully!");
+}
+
+function addGoal(){
+
+let name=document.getElementById("goalName").value;
+
+let company=document.getElementById("companyGoal").value;
+let reqText=document.getElementById("requirements").value;
+
+if(name===""||reqText===""){
+alert("Fill all fields");
+return;
+}
+
+let reqArray=reqText.split(",");
+
+let newGoal={
+
+name:name,
+deadline:deadline,
+company:company,
+requirements:reqArray.map(r=>({
+
+name:r.trim(),
+completed:false
+
+}))
+
+};
+
+goals.push(newGoal);
+
+saveToStorage();
+
+renderGoals();
+
+document.getElementById("goalName").value="";
+document.getElementById("requirements").value="";
+
+}
+
+function toggleRequirement(goalIndex,reqIndex){
+
+goals[goalIndex].requirements[reqIndex].completed=
+!goals[goalIndex].requirements[reqIndex].completed;
+
+saveToStorage();
+renderGoals();
+
+}
+
+function deleteGoal(goalIndex){
+
+if(confirm("Are you sure you want to delete this goal?")){
+
+goals.splice(goalIndex,1);
+
+saveToStorage();
+renderGoals();
+
+function drawChart(){
+
+let labels=[];
+let data=[];
+
+goals.forEach(goal=>{
+labels.push(goal.name);
+data.push(calculateProgress(goal));
+});
+
+new Chart(document.getElementById("progressChart"),{
+
+type:"bar",
+
+data:{
+labels:labels,
+datasets:[{
+label:"Goal Progress %",
+data:data
+}]
+}
+
+});
+
+}
+
+}
+
+}
+
+renderGoals();
+drawChart();
+</script>
+
+</body>
+</html>

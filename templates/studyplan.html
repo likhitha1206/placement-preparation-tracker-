@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Study Plan</title>
+
+    <style>
+
+
+body{
+background-image:url("{{ url_for('static', filename='images/bg.jpg') }}");
+background-size:cover;
+background-position:center;
+background-repeat:no-repeat;
+height:100vh;
+}
+/* BLUR OVERLAY */
+
+body::before {
+
+content:"";
+
+position:fixed;
+
+top:0;
+left:0;
+
+width:100%;
+height:100%;
+
+background:rgba(0,0,0,0.4);
+
+backdrop-filter: blur(6px);
+
+z-index:-1;
+
+}
+
+
+        body {
+            font-family: Arial;
+            background-color: #f4f6f9;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        input, button {
+            padding: 8px;
+            margin: 5px 0;
+            width: 100%;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .task {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        .progress-bar {
+            background-color: #ddd;
+            border-radius: 20px;
+            margin-top: 15px;
+        }
+
+        .progress {
+            height: 20px;
+            width: 0%;
+            background-color: green;
+            border-radius: 20px;
+            text-align: center;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>📅 Study Plan</h1>
+
+<div class="container">
+
+    <input type="text" id="taskInput" placeholder="Enter Task (ex: Complete OS Unit 1)">
+    <input type="date" id="dateInput">
+    <input type="time" id="timeInput">
+    <button onclick="addTask()">Add Task</button>
+
+    <h3>Today's Tasks</h3>
+    <div id="taskList"></div>
+
+    <div class="progress-bar">
+        <div id="progressBar" class="progress">0%</div>
+    </div>
+
+</div>
+
+<script>
+
+let tasks = JSON.parse(localStorage.getItem("studyTasks")) || [];
+
+function saveTasks() {
+    localStorage.setItem("studyTasks", JSON.stringify(tasks));
+}
+
+function requestNotificationPermission() {
+    if ("Notification" in window) {
+        Notification.requestPermission();
+    }
+}
+
+function addTask() {
+    let text = document.getElementById("taskInput").value;
+    let date = document.getElementById("dateInput").value;
+    let time = document.getElementById("timeInput").value;
+
+    if(text === "" || date === "" || time === "") {
+        alert("Fill all fields");
+        return;
+    }
+
+    tasks.push({
+        id: Date.now(),
+        text: text,
+        date: date,
+        time: time,
+        completed: false
+    });
+
+    saveTasks();
+    document.getElementById("taskInput").value = "";
+    displayTasks();
+}
+
+function displayTasks() {
+
+    let taskList = document.getElementById("taskList");
+    taskList.innerHTML = "";
+
+    tasks.forEach(task => {
+
+        let div = document.createElement("div");
+        div.className = "task";
+
+        let checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = task.completed;
+
+        checkbox.addEventListener("change", function() {
+            task.completed = this.checked;
+            saveTasks();
+            updateProgress();
+        });
+
+        let span = document.createElement("span");
+        span.innerText = `${task.text} (${task.date} ${task.time})`;
+
+        // Overdue highlight
+        let now = new Date();
+        let taskDateTime = new Date(task.date + "T" + task.time);
+
+        if(!task.completed && taskDateTime < now){
+            span.style.color = "red";
+        }
+
+        let deleteBtn = document.createElement("button");
+        deleteBtn.innerText = "Delete";
+deleteBtn.style.backgroundColor = "red";
+deleteBtn.style.color = "white";
+deleteBtn.style.border = "none";
+deleteBtn.style.padding = "5px";
+deleteBtn.style.marginLeft = "10px";
+deleteBtn.style.cursor = "pointer";
+
+deleteBtn.addEventListener("click", function() {
+    tasks = tasks.filter(t => t.id !== task.id);
+    saveTasks();
+    displayTasks();
+});
+
+div.appendChild(span);
+div.appendChild(checkbox);
+div.appendChild(deleteBtn);
+taskList.appendChild(div);
+    });
+
+    updateProgress();
+}
+
+function updateProgress() {
+
+    if(tasks.length === 0) {
+        document.getElementById("progressBar").style.width = "0%";
+        document.getElementById("progressBar").innerText = "0%";
+        return;
+    }
+
+    let completed = tasks.filter(t => t.completed).length;
+    let percent = Math.round((completed / tasks.length) * 100);
+
+    let bar = document.getElementById("progressBar");
+    bar.style.width = percent + "%";
+    bar.innerText = percent + "%";
+}
+
+// Reminder Check Every 30 Seconds
+setInterval(() => {
+
+    let now = new Date();
+
+    tasks.forEach(task => {
+
+        let taskDateTime = new Date(task.date + "T" + task.time);
+
+        if(!task.completed && Math.abs(taskDateTime - now) < 30000){
+
+            if(Notification.permission === "granted"){
+                new Notification("⏰ Study Reminder", {
+                    body: "Time to complete: " + task.text
+                });
+            }
+        }
+
+    });
+
+}, 30000);
+
+requestNotificationPermission();
+displayTasks();
+
+</script>
+</body>
+</html>
